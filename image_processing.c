@@ -3,10 +3,14 @@
 #include "common.h"
 #include <math.h>
 #include <pthread.h>
+#include <time.h>
 
 
-static float mulX(const pixel_t *pixels, const int w, const int x, const int y);
-static float mulY(const pixel_t *pixels, const int w, const int x, const int y);
+static int GX[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1} };
+static int GY[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };
+
+static int mulX(int x, int y);
+static int mulY(int x, int y);
 static void *filter_threaded(void *arg);
 
 
@@ -29,10 +33,12 @@ void *filter_threaded(void *arg)
 	else
 		end_y = image->h;
 
+	clock_t start_clock = clock();
+
 	for (int x = 1; x < w - 1; ++x) {
 		for (int y = start_y + 1; y < end_y - 1; ++y) {
-			float gx = mulX(data, w, x, y);
-			float gy = mulY(data, w, x, y);
+			int gx = mulX(x, y);
+			int gy = mulY(x, y);
 			int res = min(sqrt(gx * gx + gy * gy), 255);
 
 			image->data[x + w * y].r = res;
@@ -40,6 +46,10 @@ void *filter_threaded(void *arg)
 			image->data[x + w * y].b = res;
 		}
 	}
+
+	clock_t end_clock = clock() - start_clock;
+
+	printf("T%d processing time: %f\n", index, end_clock / (float)CLOCKS_PER_SEC);
 
 	pthread_exit(0);
 }
@@ -59,13 +69,19 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 	pthread_t *threads = safe_calloc(sizeof(pthread_t), num_threads);
 	int *ilist = safe_malloc(sizeof(int) * num_threads);
 
+	clock_t start_clock = clock();
+
 	for (int i = 0; i < num_threads; i++) {
 		ilist[i] = i;
-		pthread_create(&threads[i], NULL, filter_threaded, &ilist[i]);
+		assert(pthread_create(&threads[i], NULL, filter_threaded, &ilist[i]) == 0);
 	}
 
 	for (int i = 0; i < num_threads; i++)
 		pthread_join(threads[i], NULL);
+
+	clock_t end_clock = clock() - start_clock;
+
+	printf("common processing time: %f\n", end_clock / (float)CLOCKS_PER_SEC);
 
 	safe_free(ilist);
 	safe_free(threads);
@@ -78,14 +94,14 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 }
 
 
-float mulX(const pixel_t *pixels, const int w, const int x, const int y)
+int mulX(int x, int y)
 {
-	static int GX[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1} };
-	float result = 0;
+	int result = 0;
+	int w = image->w;
 
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
-			const pixel_t *px = pixels + (x-1+i + w * (y-1+j));
+			pixel_t *px = data + (x-1+i + w * (y-1+j));
 
 			result += GX[i][j] * (px->r + px->g + px->b) / 3;
 		}
@@ -93,14 +109,14 @@ float mulX(const pixel_t *pixels, const int w, const int x, const int y)
 }
 
 
-float mulY(const pixel_t *pixels, const int w, const int x, const int y)
+int mulY(int x, int y)
 {
-	static int GY[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };
-	float result = 0;
+	int result = 0;
+	int w = image->w;
 
 	for (int i = 0; i < 3; i++)
 		for (int j = 0; j < 3; j++) {
-			const pixel_t *px = pixels + (x-1+i + w * (y-1+j));
+			pixel_t *px = data + (x-1+i + w * (y-1+j));
 
 			result += GY[i][j] * (px->r + px->g + px->b) / 3;
 		}

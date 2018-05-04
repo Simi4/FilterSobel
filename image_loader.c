@@ -33,7 +33,7 @@ void write_image(const char *path, image_t *image)
 
 	char descr[20] = "";
 
-	sprintf(descr, "P6\n%d %d\n255\n", image->w, image->h);
+	sprintf(descr, "P6\n%u %u\n255\n", image->w, image->h);
 
 	safe_write(fd, descr, strlen(descr));
 	safe_write(fd, image->data, image->data_size);

@@ -23,13 +23,13 @@ int main(int argc, char *argv[])
 		{0,         0, 0, 0  }
 	};
 
-	int c, num_threads = 0;
+	int num_threads = 0;
 	char *ifpath, *ofpath;
 
 	ifpath = ofpath = NULL;
 
 	while (1) {
-		c = getopt_long(argc, argv, "i:o:t:h", long_opt, NULL);
+		int c = getopt_long(argc, argv, "i:o:t:h", long_opt, NULL);
 
 		if (c == -1)
 			break;

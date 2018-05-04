@@ -28,11 +28,6 @@ void safe_read(int fd, void *buf, size_t count)
 	assert(read(fd, buf, count) == count);
 }
 
-void safe_lseek(int fd, off_t offset, int whence)
-{
-	assert(lseek(fd, offset, whence) != (off_t)-1);
-}
-
 void *safe_calloc(size_t size, size_t cnt)
 {
 	void *buf = calloc(size, cnt);

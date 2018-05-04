@@ -11,8 +11,6 @@ int safe_open(const char *pathname, int flags);
 
 void safe_read(int fd, void *buf, size_t count);
 
-void safe_lseek(int fd, off_t offset, int whence);
-
 void *safe_malloc(size_t size);
 
 void *safe_calloc(size_t size, size_t cnt);
