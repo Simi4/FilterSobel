@@ -49,7 +49,8 @@ void *filter_threaded(void *arg)
 
 	clock_t end_clock = clock() - start_clock;
 
-	printf("T%d processing time: %f\n", index, end_clock / (float)CLOCKS_PER_SEC);
+	printf("T%d processing time: %f\n",
+		index, end_clock / (float)CLOCKS_PER_SEC);
 
 	pthread_exit(0);
 }
@@ -73,7 +74,8 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 
 	for (int i = 0; i < num_threads; i++) {
 		ilist[i] = i;
-		assert(pthread_create(&threads[i], NULL, filter_threaded, &ilist[i]) == 0);
+		assert(pthread_create(
+			&threads[i], NULL, filter_threaded, &ilist[i]) == 0);
 	}
 
 	for (int i = 0; i < num_threads; i++)
@@ -81,7 +83,8 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 
 	clock_t end_clock = clock() - start_clock;
 
-	printf("common processing time: %f\n", end_clock / (float)CLOCKS_PER_SEC);
+	printf("common processing time: %f\n",
+		end_clock / (float)CLOCKS_PER_SEC);
 
 	safe_free(ilist);
 	safe_free(threads);
