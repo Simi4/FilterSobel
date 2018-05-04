@@ -25,18 +25,18 @@ void *filter_threaded(void *arg)
 	int index = *(int *)arg;
 	int w = image->w;
 	float h = image->h / (float)thread_count;
-	int start_y = h * index;
+	int start_y = index ? h * index : 1;
 	int end_y;
 
 	if (index + 1 < thread_count)
-		end_y = h * (index + 1) + 3;
+		end_y = h * (index + 1);
 	else
-		end_y = image->h;
+		end_y = image->h - 1;
 
 	clock_t start_clock = clock();
 
 	for (int x = 1; x < w - 1; ++x) {
-		for (int y = start_y + 1; y < end_y - 1; ++y) {
+		for (int y = start_y; y < end_y; ++y) {
 			int gx = mulX(x, y);
 			int gy = mulY(x, y);
 			int res = min(sqrt(gx * gx + gy * gy), 255);
