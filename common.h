@@ -3,7 +3,12 @@
 #include <string.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <time.h>
 
+
+void safe_begin_timer(struct timespec *start);
+
+double safe_end_timer(struct timespec *start);
 
 int safe_creat(const char *pathname, mode_t mode);
 

@@ -7,6 +7,31 @@
 #include <stdlib.h>
 
 
+void safe_begin_timer(struct timespec *start)
+{
+	assert(clock_gettime(CLOCK_MONOTONIC_RAW, start) == 0);
+}
+
+double safe_end_timer(struct timespec *start)
+{
+	struct timespec stop, duration;
+
+	assert(clock_gettime(CLOCK_MONOTONIC_RAW, &stop) == 0);
+
+	if ((stop.tv_nsec - start->tv_nsec) < 0) 
+	{
+		duration.tv_sec = stop.tv_sec - start->tv_sec - 1;
+		duration.tv_nsec = 1E9 + stop.tv_nsec - start->tv_nsec;
+	} 
+	else
+	{
+		duration.tv_sec = stop.tv_sec - start->tv_sec;
+		duration.tv_nsec = stop.tv_nsec - start->tv_nsec;
+	}
+
+	return duration.tv_sec + duration.tv_nsec / 1E9;
+}
+
 int safe_creat(const char *pathname, mode_t mode)
 {
 	int fd = creat(pathname, mode);

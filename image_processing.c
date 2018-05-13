@@ -3,14 +3,11 @@
 #include "common.h"
 #include <math.h>
 #include <pthread.h>
-#include <time.h>
 
 
-static int GX[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1} };
-static int GY[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };
+const char GX[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1} };
+const char GY[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1} };
 
-static int mulX(int x, int y);
-static int mulY(int x, int y);
 static void *filter_threaded(void *arg);
 
 
@@ -22,10 +19,10 @@ static int thread_count;
 
 void *filter_threaded(void *arg)
 {
-	int index = *(int *)arg;
-	int w = image->w;
-	float h = image->h / (float)thread_count;
-	int start_y = index ? h * index : 1;
+	const int index = *(int *)arg;
+	const int w = image->w;
+	const float h = image->h / (float)thread_count;
+	const int start_y = index ? h * index : 1;
 	int end_y;
 
 	if (index + 1 < thread_count)
@@ -33,24 +30,31 @@ void *filter_threaded(void *arg)
 	else
 		end_y = image->h - 1;
 
-	clock_t start_clock = clock();
+	//struct timespec start_timer;
+	//safe_begin_timer(&start_timer);
 
-	for (int x = 1; x < w - 1; ++x) {
-		for (int y = start_y; y < end_y; ++y) {
-			int gx = mulX(x, y);
-			int gy = mulY(x, y);
-			int res = min(sqrt(gx * gx + gy * gy), 255);
+	for (int y = start_y; y < end_y; ++y) {
+		pixel_t *row = image->data + (w * y);
+		for (int x = 1; x < w - 1; ++x) {
+			int gx = 0, gy = 0;
+			pixel_t *px;
 
-			image->data[x + w * y].r = res;
-			image->data[x + w * y].g = res;
-			image->data[x + w * y].b = res;
+			for (int i = 0; i < 3; ++i)
+				for (int j = 0; j < 3; ++j) {
+					px = data + (x-1+i + w * (y-1+j));
+
+					int d = (px->r + px->g + px->b) / 3;
+
+					gx += GX[i][j] * d;
+					gy += GY[i][j] * d;
+				}
+
+			px = row + x;
+			px->r = px->g = px->b = min(sqrt(gx * gx + gy * gy), 255);
 		}
 	}
 
-	clock_t end_clock = clock() - start_clock;
-
-	printf("T%d processing time: %f\n",
-		index, end_clock / (float)CLOCKS_PER_SEC);
+	//printf("T%d processing time: %lf\n", index, safe_end_timer(&start_timer));
 
 	pthread_exit(0);
 }
@@ -63,28 +67,32 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 	image->data = safe_calloc(image->data_size, 1);
 
 	if (num_threads*3 > image->h)
-		num_threads = max(image->h / 3, 1);
+		num_threads = max(image->h / 3.0, 1);
 
 	thread_count = num_threads;
 
-	pthread_t *threads = safe_calloc(sizeof(pthread_t), num_threads);
+	pthread_t *threads = safe_malloc(sizeof(pthread_t) * num_threads);
 	int *ilist = safe_malloc(sizeof(int) * num_threads);
 
-	clock_t start_clock = clock();
+	pthread_attr_t attr;
+	pthread_attr_init(&attr);
 
-	for (int i = 0; i < num_threads; i++) {
+	struct timespec start_timer;
+	safe_begin_timer(&start_timer);
+
+	for (int i = 0; i < num_threads; ++i) {
 		ilist[i] = i;
+
 		assert(pthread_create(
-			&threads[i], NULL, filter_threaded, &ilist[i]) == 0);
+			&threads[i], &attr, filter_threaded, &ilist[i]) == 0);
 	}
 
-	for (int i = 0; i < num_threads; i++)
+	for (int i = 0; i < num_threads; ++i)
 		pthread_join(threads[i], NULL);
 
-	clock_t end_clock = clock() - start_clock;
+	printf("common processing time: %lf\n", safe_end_timer(&start_timer));
 
-	printf("common processing time: %f\n",
-		end_clock / (float)CLOCKS_PER_SEC);
+	assert(pthread_attr_destroy(&attr) == 0);
 
 	safe_free(ilist);
 	safe_free(threads);
@@ -94,34 +102,4 @@ void process_image(int num_threads, const char *ifpath, const char *ofpath)
 	safe_free(data);
 	safe_free(image->data);
 	safe_free(image);
-}
-
-
-int mulX(int x, int y)
-{
-	int result = 0;
-	int w = image->w;
-
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++) {
-			pixel_t *px = data + (x-1+i + w * (y-1+j));
-
-			result += GX[i][j] * (px->r + px->g + px->b) / 3;
-		}
-	return result;
-}
-
-
-int mulY(int x, int y)
-{
-	int result = 0;
-	int w = image->w;
-
-	for (int i = 0; i < 3; i++)
-		for (int j = 0; j < 3; j++) {
-			pixel_t *px = data + (x-1+i + w * (y-1+j));
-
-			result += GY[i][j] * (px->r + px->g + px->b) / 3;
-		}
-	return result;
 }
